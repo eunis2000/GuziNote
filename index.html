@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Guzi Log v7 🎀</title>
+    <title>我的谷子記錄簿 v8 🎀</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
@@ -24,19 +24,24 @@
         <!-- 頂部導航 -->
         <header class="bg-white/90 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-pink-100 flex justify-between items-center">
             <div class="flex items-center gap-4">
+                <!-- 標題 (回歸中文，支援繁簡切換) -->
                 <h1 class="text-xl md:text-2xl font-bold text-pink-500 flex items-center gap-2 cursor-default">
-                    🎀 My Guzi Log
+                    🎀 {{ t('appName') }}
                 </h1>
+                
+                <!-- 電腦版新增按鈕 -->
                 <button @click="showModal = true" class="hidden md:flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-full text-sm font-bold transition shadow-md shadow-pink-200">
                     <span>📷</span> {{ t('addBtn') }}
                 </button>
             </div>
             
             <div class="flex items-center gap-3">
+                <!-- 語言切換 -->
                 <button @click="toggleLang" class="text-xs font-bold px-2 py-1 rounded border border-pink-200 text-pink-400 hover:bg-pink-50 transition">
                     {{ lang === 'tw' ? '繁' : '简' }}
                 </button>
 
+                <!-- 設定選單 -->
                 <div class="relative">
                     <button @click="showMenu = !showMenu" class="text-gray-500 hover:text-pink-500 p-2 transition rounded-full hover:bg-gray-100">
                         <span class="text-xl">⚙️</span>
@@ -150,10 +155,9 @@
                         <input type="file" ref="fileInput" accept="image/*" class="file-input-hidden" @change="handleImageUpload">
                     </div>
 
-                    <!-- 1. 作品/IP名 (新增區塊) -->
+                    <!-- 1. 作品/IP名 -->
                     <div>
                         <label class="text-xs font-bold text-indigo-500 ml-1">{{ t('labelSeries') }}</label>
-                        <!-- 作品名標籤 -->
                         <div class="flex flex-wrap gap-2 mt-1 mb-2 max-h-20 overflow-y-auto hide-scrollbar">
                             <button v-for="opt in currentSeriesList" :key="opt" 
                                 @click="form.series = opt"
@@ -214,6 +218,7 @@
 
         const i18n = {
             'tw': {
+                appName: '我的谷子記錄簿',
                 menuTitle: '資料管理',
                 exportCSV: '匯出 WPS 表格 (無圖)',
                 exportBackup: '下載完整備份 (含圖)',
@@ -247,6 +252,7 @@
                 defaultSeries: ['排球少年', '藍色監獄', 'Chiikawa', '咒術迴戰']
             },
             'cn': {
+                appName: '我的谷子记录簿',
                 menuTitle: '数据管理',
                 exportCSV: '导出 WPS 表格 (无图)',
                 exportBackup: '下载完整备份 (含图)',
@@ -289,7 +295,6 @@
                 const fileInput = ref(null);
                 const items = ref([]);
                 
-                // 標籤管理 (途徑 & 作品)
                 const sourceListTW = ref([...i18n.tw.defaultSources]);
                 const sourceListCN = ref([...i18n.cn.defaultSources]);
                 const seriesListTW = ref([...i18n.tw.defaultSeries]);
@@ -308,7 +313,6 @@
                     const savedItems = localStorage.getItem('guzi_collection_v1');
                     if (savedItems) items.value = JSON.parse(savedItems);
                     
-                    // 讀取自訂標籤 (途徑 & 作品)
                     const savedTagsTW = localStorage.getItem('guzi_tags_tw');
                     const savedTagsCN = localStorage.getItem('guzi_tags_cn');
                     const savedSeriesTW = localStorage.getItem('guzi_series_tw');
@@ -331,7 +335,6 @@
                     catch (e) { alert(t('alertFull')); }
                 }, { deep: true });
 
-                // 監聽並儲存所有標籤列表
                 watch(sourceListTW, (newVal) => localStorage.setItem('guzi_tags_tw', JSON.stringify(newVal)), { deep: true });
                 watch(sourceListCN, (newVal) => localStorage.setItem('guzi_tags_cn', JSON.stringify(newVal)), { deep: true });
                 watch(seriesListTW, (newVal) => localStorage.setItem('guzi_series_tw', JSON.stringify(newVal)), { deep: true });
@@ -368,7 +371,6 @@
                     const currentSource = form.value.source.trim();
                     const currentSeries = form.value.series.trim();
 
-                    // 智慧標籤邏輯 (途徑 & 作品)
                     if (lang.value === 'tw') {
                         if (currentSource && !sourceListTW.value.includes(currentSource)) sourceListTW.value.push(currentSource);
                         if (currentSeries && !seriesListTW.value.includes(currentSeries)) seriesListTW.value.push(currentSeries);
@@ -405,7 +407,6 @@
 
                 const exportToCSV = () => {
                     if (items.value.length === 0) { alert(t('alertNoData')); return; }
-                    // 新增 Series 欄位
                     let csvContent = "\uFEFFSeries,Name,Date,Source,Price\n";
                     items.value.forEach(item => {
                         const series = item.series ? `"${item.series.replace(/"/g, '""')}"` : "";
