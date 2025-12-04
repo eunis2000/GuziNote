@@ -1,0 +1,240 @@
+  <!DOCTYPE html>
+  <html lang="zh-HK">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>谷子照片牆生成器 v3</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+      <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+      <style>
+          body { font-family: 'Zen Maru Gothic', sans-serif; background-color: #fdf2f8; }
+          .hide-scrollbar::-webkit-scrollbar { display: none; }
+          .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          .polaroid-shadow { box-shadow: 3px 3px 10px rgba(0,0,0,0.1), 0 0 2px rgba(0,0,0,0.05); }
+      </style>
+  </head>
+  <body class="min-h-screen p-4 md:p-8 text-slate-700">
+
+      <div id="app" class="max-w-7xl mx-auto">
+          
+          <!-- 頂部導航 -->
+          <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 sticky top-0 z-20 py-2 bg-[#fdf2f8]/90 backdrop-blur-sm">
+              <h1 class="text-2xl md:text-3xl font-bold text-pink-500 flex items-center gap-2 cursor-pointer" @click="step = 1">
+                  <span>🖼️</span> 谷子照片牆
+              </h1>
+              
+              <div class="flex gap-3 items-center">
+                  <!-- 如果是自動讀取的，顯示返回主頁按鈕 -->
+                  <a href="index.html" class="bg-white text-pink-500 border border-pink-200 hover:bg-pink-50 px-4 py-2 rounded-full font-bold transition flex items-center gap-2 text-sm no-underline">
+                      <span>🏠 返回記錄簿</span>
+                  </a>
+
+                  <button v-if="step === 3" @click="step = 2" class="bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-full font-bold transition flex items-center gap-2 text-sm">
+                      <span>↩️ 重選作品</span>
+                  </button>
+                  
+                  <button v-if="step === 3" @click="printPage" class="bg-pink-500 text-white px-4 py-2 rounded-full font-bold hover:bg-pink-600 transition shadow-md flex items-center gap-2 text-sm">
+                      <span>🖨️ 列印/PDF</span>
+                  </button>
+              </div>
+          </header>
+
+          <!-- 步驟 1: 數據源選擇 -->
+          <div v-if="step === 1" class="max-w-2xl mx-auto text-center py-10">
+              
+              <!-- 自動檢測到的數據 -->
+              <div v-if="hasLocalData" class="bg-white p-8 rounded-3xl shadow-lg border border-pink-100 mb-8">
+                  <div class="text-4xl mb-4">✨</div>
+                  <h2 class="text-xl font-bold text-gray-800 mb-2">檢測到本地記錄！</h2>
+                  <p class="text-gray-500 mb-6">發現你的瀏覽器中已有 {{ localCount }} 筆谷子資料。</p>
+                  <button @click="useLocalData" class="bg-pink-500 text-white text-lg font-bold px-8 py-3 rounded-full shadow-lg shadow-pink-200 hover:bg-pink-600 hover:scale-105 transition w-full md:w-auto">
+                      直接使用本地數據 👉
+                  </button>
+              </div>
+
+              <!-- 手動上傳 (備用) -->
+              <div class="border-2 border-dashed border-pink-200 rounded-3xl p-8 bg-white/50">
+                  <h3 class="text-md font-bold text-gray-400 mb-4">或是匯入備份檔 (.json)</h3>
+                  <label class="bg-white text-gray-500 border border-gray-300 hover:bg-gray-50 px-6 py-2 rounded-full font-bold cursor-pointer transition shadow-sm inline-flex items-center gap-2">
+                      <span>📂 選擇檔案</span>
+                      <input type="file" @change="loadBackup" accept=".json" class="hidden">
+                  </label>
+              </div>
+          </div>
+
+          <!-- 步驟 2: 選擇作品 -->
+          <div v-if="step === 2" class="max-w-4xl mx-auto">
+              <div class="bg-white rounded-2xl p-6 shadow-lg border border-pink-100">
+                  <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                      <span>🎯</span> 請選擇要生成的作品
+                  </h2>
+
+                  <div class="flex gap-2 mb-4 pb-4 border-b border-gray-100">
+                      <button @click="selectAll" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-gray-600 transition">全選</button>
+                      <button @click="deselectAll" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-gray-600 transition">清空</button>
+                  </div>
+
+                  <div class="flex flex-wrap gap-3 max-h-[60vh] overflow-y-auto p-1">
+                      <button 
+                          v-for="series in seriesStats" 
+                          :key="series.name"
+                          @click="toggleSeries(series.name)"
+                          class="relative px-4 py-2 rounded-xl border-2 transition-all duration-200 flex items-center gap-2 group"
+                          :class="selectedSeries.includes(series.name) 
+                              ? 'bg-pink-50 border-pink-500 text-pink-600 shadow-md transform scale-105' 
+                              : 'bg-white border-gray-200 text-gray-400 hover:border-pink-200 hover:bg-gray-50'"
+                      >
+                          <span class="font-bold">{{ series.name }}</span>
+                          <span class="text-xs px-1.5 py-0.5 rounded-full" 
+                                :class="selectedSeries.includes(series.name) ? 'bg-pink-200 text-pink-700' : 'bg-gray-100 text-gray-400'">
+                              {{ series.count }}
+                          </span>
+                          <span v-if="selectedSeries.includes(series.name)" class="absolute -top-2 -right-2 bg-pink-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-sm">✓</span>
+                      </button>
+                  </div>
+
+                  <div class="mt-8 text-center">
+                      <button 
+                          @click="generateWall" 
+                          :disabled="selectedSeries.length === 0"
+                          class="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-lg font-bold px-10 py-3 rounded-full shadow-lg shadow-pink-200 hover:shadow-xl hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                          生成照片牆 ({{ calculateSelectedCount }} 個谷子) 👉
+                      </button>
+                  </div>
+              </div>
+          </div>
+
+          <!-- 步驟 3: 照片瀑布流 -->
+          <div v-if="step === 3">
+              <div v-if="displayItems.length > 0" class="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
+                  <div v-for="item in displayItems" :key="item.id" class="break-inside-avoid bg-white p-3 pb-4 rounded-sm polaroid-shadow transform hover:scale-[1.02] transition duration-300">
+                      <div class="aspect-auto w-full overflow-hidden rounded-sm bg-gray-100 mb-3 border border-gray-100 relative group">
+                          <img v-if="item.image" :src="item.image" class="w-full h-auto object-cover block" loading="lazy">
+                          <div v-else class="w-full h-32 flex items-center justify-center text-gray-300 bg-gray-50">無圖片</div>
+                      </div>
+                      <div class="px-1">
+                          <div class="flex justify-between items-start mb-1">
+                              <span v-if="item.series" class="text-[10px] font-bold text-white bg-pink-400 px-2 py-0.5 rounded-full opacity-80">{{ item.series }}</span>
+                              <span class="text-[10px] text-gray-400 font-mono pt-0.5">{{ item.date }}</span>
+                          </div>
+                          <h3 class="font-bold text-gray-700 text-sm leading-tight mt-2">{{ item.name }}</h3>
+                          <div class="mt-2 flex justify-between items-end border-t border-dashed border-gray-100 pt-2">
+                              <span class="text-[10px] text-gray-400 bg-gray-50 px-1 rounded">{{ item.source }}</span>
+                              <span class="text-xs font-bold text-pink-500">$ {{ item.price }}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div v-else class="text-center py-20 text-gray-400">沒有符合條件的谷子</div>
+              <div class="mt-12 text-center text-gray-400 text-sm pb-8 border-t border-gray-100 pt-8">
+                  當前展示：{{ selectedSeries.join(', ') }} <br> 共 {{ displayItems.length }} 張照片
+              </div>
+          </div>
+
+      </div>
+
+      <script>
+          const { createApp, ref, computed, onMounted } = Vue;
+
+          createApp({
+              setup() {
+                  const step = ref(1);
+                  const allItems = ref([]);
+                  const displayItems = ref([]);
+                  const selectedSeries = ref([]);
+                  const seriesStats = ref([]);
+                  
+                  const hasLocalData = ref(false);
+                  const localCount = ref(0);
+
+                  onMounted(() => {
+                      // 檢查本地是否有數據 (同源策略)
+                      const savedItems = localStorage.getItem('guzi_collection_v1');
+                      if (savedItems) {
+                          try {
+                              const parsed = JSON.parse(savedItems);
+                              if (parsed.length > 0) {
+                                  hasLocalData.value = true;
+                                  localCount.value = parsed.length;
+                              }
+                          } catch(e) {}
+                      }
+                  });
+
+                  const useLocalData = () => {
+                      const savedItems = localStorage.getItem('guzi_collection_v1');
+                      if (savedItems) {
+                          processData(JSON.parse(savedItems));
+                      }
+                  };
+
+                  const loadBackup = (event) => {
+                      const file = event.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                          try {
+                              const rawData = JSON.parse(e.target.result);
+                              const loadedItems = rawData.items || (Array.isArray(rawData) ? rawData : []);
+                              processData(loadedItems);
+                          } catch (err) { alert('讀取失敗！'); }
+                      };
+                      reader.readAsText(file);
+                  };
+
+                  const processData = (data) => {
+                      allItems.value = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                      analyzeSeries();
+                      step.value = 2;
+                  };
+
+                  const analyzeSeries = () => {
+                      const stats = {};
+                      allItems.value.forEach(item => {
+                          const sName = item.series ? item.series.trim() : '未分類';
+                          if (!stats[sName]) stats[sName] = 0;
+                          stats[sName]++;
+                      });
+                      seriesStats.value = Object.keys(stats)
+                          .map(key => ({ name: key, count: stats[key] }))
+                          .sort((a, b) => b.count - a.count);
+                      selectedSeries.value = []; 
+                  };
+
+                  const toggleSeries = (name) => {
+                      if (selectedSeries.value.includes(name)) selectedSeries.value = selectedSeries.value.filter(s => s !== name);
+                      else selectedSeries.value.push(name);
+                  };
+                  const selectAll = () => selectedSeries.value = seriesStats.value.map(s => s.name);
+                  const deselectAll = () => selectedSeries.value = [];
+                  
+                  const calculateSelectedCount = computed(() => {
+                      return allItems.value.filter(item => {
+                          const sName = item.series ? item.series.trim() : '未分類';
+                          return selectedSeries.value.includes(sName);
+                      }).length;
+                  });
+
+                  const generateWall = () => {
+                      displayItems.value = allItems.value.filter(item => {
+                          const sName = item.series ? item.series.trim() : '未分類';
+                          return selectedSeries.value.includes(sName);
+                      });
+                      step.value = 3;
+                      window.scrollTo(0, 0);
+                  };
+
+                  const printPage = () => window.print();
+
+                  return {
+                      step, allItems, displayItems, seriesStats, selectedSeries,
+                      hasLocalData, localCount, useLocalData,
+                      loadBackup, toggleSeries, selectAll, deselectAll, generateWall, printPage, calculateSelectedCount
+                  };
+              }
+          }).mount('#app');
+      </script>
+  </body>
+  </html>
