@@ -3,9 +3,10 @@
   <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>我的谷子記錄簿🎀</title>
+      <title>我的谷子記錄簿 v9.1 🎀</title>
+      <!-- 使用更穩定的 CDN -->
       <script src="https://cdn.tailwindcss.com"></script>
-      <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
       <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
       <style>
           body { font-family: 'Zen Maru Gothic', sans-serif; }
@@ -15,11 +16,27 @@
           .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
           .hover-zoom { transition: transform 0.2s; }
           .group:hover .hover-zoom { transform: scale(1.05); }
+          
+          /* 載入時隱藏 Vue 模板，避免閃爍 */
+          [v-cloak] { display: none; }
+          
+          /* 載入畫面樣式 */
+          #loading-screen {
+              position: fixed; inset: 0; background: #fff; z-index: 9999;
+              display: flex; flex-direction: column; align-items: center; justify-content: center;
+          }
       </style>
   </head>
   <body class="bg-slate-50 text-slate-700 min-h-screen pb-24 md:pb-10">
 
-      <div id="app" class="max-w-7xl mx-auto min-h-screen bg-white shadow-xl relative flex flex-col">
+      <!-- 載入中提示 (如果 Vue 失敗，這個會一直顯示) -->
+      <div id="loading-screen">
+          <div class="text-4xl animate-bounce mb-4">🎀</div>
+          <div class="text-pink-500 font-bold">正在讀取谷子記錄...</div>
+          <div class="text-xs text-gray-400 mt-2">Initialing App...</div>
+      </div>
+
+      <div id="app" class="max-w-7xl mx-auto min-h-screen bg-white shadow-xl relative flex flex-col" v-cloak>
           
           <!-- 頂部導航 -->
           <header class="bg-white/90 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-pink-100 flex justify-between items-center">
@@ -48,7 +65,7 @@
                               <p class="text-xs text-gray-400 font-bold">{{ t('menuTitle') }}</p>
                           </div>
                           
-                          <!-- 新增：跳轉到照片牆 -->
+                          <!-- 跳轉到照片牆 -->
                           <a href="wall.html" class="w-full text-left px-4 py-3 text-sm hover:bg-pink-50 text-pink-600 font-bold flex items-center gap-2 no-underline">
                               <span>🖼️</span> {{ t('photoWall') }}
                           </a>
@@ -151,7 +168,7 @@
                               <div class="text-2xl mb-1">📸</div>
                               <span class="text-xs font-bold">{{ t('photoTip') }}</span>
                           </div>
-                          <input type=\"file\" ref=\"fileInput\" accept=\"image/*\" class=\"file-input-hidden\" @change=\"handleImageUpload\">
+                          <input type="file" ref="fileInput" accept="image/*" class="file-input-hidden" @change="handleImageUpload">
                       </div>
 
                       <div>
@@ -274,7 +291,7 @@
               }
           };
 
-          createApp({
+          const app = createApp({
               setup() {
                   const lang = ref('tw');
                   const showModal = ref(false);
@@ -294,6 +311,10 @@
                   const currentSeriesList = computed(() => lang.value === 'tw' ? seriesListTW.value : seriesListCN.value);
 
                   onMounted(() => {
+                      // 移除 Loading 畫面
+                      const loadingScreen = document.getElementById('loading-screen');
+                      if(loadingScreen) loadingScreen.style.display = 'none';
+
                       const savedLang = localStorage.getItem('guzi_lang');
                       if (savedLang) lang.value = savedLang;
                       
@@ -457,7 +478,9 @@
                       exportToCSV, exportBackup, importBackup, resetTags
                   };
               }
-          }).mount('#app');
+          });
+          
+          app.mount('#app');
       </script>
       
       <style>
