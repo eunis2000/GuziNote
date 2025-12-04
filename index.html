@@ -3,28 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的谷子記錄簿 🎀</title>
+    <title>我的谷子記錄簿 v5 🎀</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入可愛的圓體字型 -->
-    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Zen Maru Gothic', sans-serif; }
-        /* 隱藏檔案輸入框 */
         .file-input-hidden { display: none; }
+        .menu-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-pink-50 text-slate-700 min-h-screen pb-20">
+<body class="bg-pink-50 text-slate-700 min-h-screen pb-24">
 
-    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-xl relative">
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative">
         
         <!-- 頂部導航 -->
-        <header class="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4 border-b border-pink-100 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-pink-500">🎀 My Guzi Log</h1>
-            <button @click="exportToCSV" class="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-bold hover:bg-green-200 transition flex items-center gap-1">
-                <span>📥 匯出表格 (WPS)</span>
-            </button>
+        <header class="bg-white/90 backdrop-blur-md sticky top-0 z-30 px-5 py-4 border-b border-pink-100">
+            <div class="flex justify-between items-center">
+                <!-- 標題 (中文化) -->
+                <h1 class="text-xl font-bold text-pink-500 flex items-center gap-2">
+                    🎀 {{ t('appName') }}
+                </h1>
+                
+                <div class="flex items-center gap-2">
+                    <!-- 繁簡切換按鈕 -->
+                    <button @click="toggleLang" class="text-xs font-bold px-2 py-1 rounded border border-pink-200 text-pink-400 hover:bg-pink-50 transition">
+                        {{ lang === 'tw' ? '繁' : '简' }}
+                    </button>
+
+                    <!-- 設定按鈕 -->
+                    <div class="relative">
+                        <button @click="showMenu = !showMenu" class="text-gray-500 hover:text-pink-500 p-2 transition">
+                            <span class="text-xl">⚙️</span>
+                        </button>
+                        
+                        <!-- 下拉選單 -->
+                        <div v-if="showMenu" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl menu-shadow border border-pink-100 overflow-hidden z-40 animate-slide-up-sm">
+                            <div class="p-3 border-b border-gray-50 bg-gray-50">
+                                <p class="text-xs text-gray-400 font-bold">{{ t('menuTitle') }}</p>
+                            </div>
+                            <button @click="exportToCSV" class="w-full text-left px-4 py-3 text-sm hover:bg-pink-50 text-gray-700 flex items-center gap-2">
+                                <span>📊</span> {{ t('exportCSV') }}
+                            </button>
+                            <button @click="exportBackup" class="w-full text-left px-4 py-3 text-sm hover:bg-pink-50 text-gray-700 flex items-center gap-2 border-t border-gray-50">
+                                <span>💾</span> {{ t('exportBackup') }}
+                            </button>
+                            <div class="relative border-t border-gray-50 group">
+                                <button class="w-full text-left px-4 py-3 text-sm hover:bg-pink-50 text-pink-600 font-bold flex items-center gap-2 bg-pink-50/30">
+                                    <span>♻️</span> {{ t('importBackup') }}
+                                </button>
+                                <input type="file" @change="importBackup" accept=".json" class="absolute inset-0 opacity-0 cursor-pointer">
+                            </div>
+                            <button @click="resetTags" class="w-full text-left px-4 py-3 text-xs text-gray-400 hover:text-red-500 border-t border-gray-50">
+                                🔄 {{ t('resetTags') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </header>
+
+        <div v-if="showMenu" @click="showMenu = false" class="fixed inset-0 z-20"></div>
 
         <!-- 內容列表區 -->
         <div class="p-4 space-y-4">
@@ -32,11 +73,11 @@
             <div class="bg-gradient-to-r from-pink-400 to-rose-400 rounded-2xl p-5 text-white shadow-lg shadow-pink-200">
                 <div class="flex justify-between items-end">
                     <div>
-                        <div class="text-pink-100 text-sm">總收藏數</div>
-                        <div class="text-3xl font-bold">{{ items.length }} <span class="text-sm font-normal">個</span></div>
+                        <div class="text-pink-100 text-sm">{{ t('totalCount') }}</div>
+                        <div class="text-3xl font-bold">{{ items.length }} <span class="text-sm font-normal">{{ t('unit') }}</span></div>
                     </div>
                     <div class="text-right">
-                        <div class="text-pink-100 text-sm">總花費</div>
+                        <div class="text-pink-100 text-sm">{{ t('totalCost') }}</div>
                         <div class="text-2xl font-bold">HK$ {{ formatNumber(totalCost) }}</div>
                     </div>
                 </div>
@@ -44,21 +85,18 @@
 
             <!-- 列表 -->
             <div v-if="items.length > 0" class="grid grid-cols-2 gap-3">
-                <div v-for="(item, index) in items" :key="item.id" class="bg-white border border-pink-100 rounded-xl overflow-hidden shadow-sm relative group">
-                    <!-- 刪除按鈕 -->
-                    <button @click="removeItem(index)" class="absolute top-2 right-2 bg-black/30 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs backdrop-blur-sm z-10">✕</button>
+                <div v-for="(item, index) in items" :key="item.id" class="bg-white border border-pink-100 rounded-xl overflow-hidden shadow-sm relative group transition hover:shadow-md">
+                    <button @click="removeItem(index)" class="absolute top-2 right-2 bg-black/30 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs backdrop-blur-sm z-10 hover:bg-red-500 transition">✕</button>
                     
-                    <!-- 圖片顯示 -->
                     <div class="aspect-square bg-gray-100 relative overflow-hidden">
                         <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
                         <div v-else class="w-full h-full flex items-center justify-center text-pink-200 text-4xl">📦</div>
                     </div>
                     
-                    <!-- 資訊 -->
                     <div class="p-3">
                         <h3 class="font-bold text-gray-800 truncate text-sm">{{ item.name }}</h3>
                         <div class="flex justify-between items-center mt-1">
-                            <span class="text-xs px-2 py-0.5 bg-pink-50 text-pink-600 rounded-md">{{ item.source }}</span>
+                            <span class="text-xs px-2 py-0.5 bg-pink-50 text-pink-600 rounded-md truncate max-w-[80px]">{{ item.source }}</span>
                             <span class="text-sm font-bold text-rose-500">${{ item.price }}</span>
                         </div>
                         <div class="text-[10px] text-gray-400 mt-2 text-right">{{ item.date }}</div>
@@ -66,70 +104,77 @@
                 </div>
             </div>
 
-            <div v-else class="py-10 text-center text-gray-400">
-                <div class="text-4xl mb-2">📷</div>
-                <p>還沒有記錄喔，快去拍張照吧！</p>
+            <div v-else class="py-12 text-center text-gray-400">
+                <div class="text-5xl mb-3 opacity-50">📦</div>
+                <p class="text-sm">{{ t('emptyState') }}</p>
+                <p class="text-xs mt-1">{{ t('emptyTip') }}</p>
             </div>
         </div>
 
-        <!-- 底部浮動按鈕 (FAB) -->
-        <div class="fixed bottom-6 left-0 right-0 flex justify-center z-20">
+        <!-- 底部浮動按鈕 -->
+        <div class="fixed bottom-8 left-0 right-0 flex justify-center z-20">
             <button @click="showModal = true" class="bg-pink-500 hover:bg-pink-600 text-white rounded-full p-4 shadow-xl shadow-pink-300/50 transition transform active:scale-95 flex items-center gap-2 px-6">
                 <span class="text-2xl">📷</span>
-                <span class="font-bold">記一筆</span>
+                <span class="font-bold">{{ t('addBtn') }}</span>
             </button>
         </div>
 
-        <!-- 新增記錄視窗 (Modal) -->
+        <!-- 新增記錄視窗 -->
         <div v-if="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
             <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-gray-800">✨ 新增谷子</h2>
+                    <h2 class="text-xl font-bold text-gray-800">✨ {{ t('addTitle') }}</h2>
                     <button @click="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
                 </div>
 
                 <div class="space-y-4">
-                    <!-- 拍照/上傳區 -->
-                    <div @click="triggerFileInput" class="w-full h-40 border-2 border-dashed border-pink-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 transition relative overflow-hidden">
+                    <div @click="triggerFileInput" class="w-full h-40 border-2 border-dashed border-pink-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 transition relative overflow-hidden group">
                         <img v-if="form.image" :src="form.image" class="absolute inset-0 w-full h-full object-cover">
-                        <div v-else class="text-center text-pink-400">
+                        <div v-else class="text-center text-pink-400 group-hover:scale-110 transition">
                             <div class="text-3xl mb-1">📸</div>
-                            <span class="text-sm font-bold">點擊拍照 / 選圖</span>
+                            <span class="text-sm font-bold">{{ t('photoTip') }}</span>
                         </div>
                         <input type="file" ref="fileInput" accept="image/*" class="file-input-hidden" @change="handleImageUpload">
                     </div>
 
                     <div>
-                        <label class="text-xs font-bold text-gray-500 ml-1">谷子名稱</label>
-                        <input v-model="form.name" type="text" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-pink-300 outline-none" placeholder="例如：排球少年 徽章">
+                        <label class="text-xs font-bold text-gray-500 ml-1">{{ t('labelName') }}</label>
+                        <input v-model="form.name" type="text" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-pink-300 outline-none" :placeholder="t('placeholderName')">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="text-xs font-bold text-gray-500 ml-1">入手價格</label>
+                            <label class="text-xs font-bold text-gray-500 ml-1">{{ t('labelPrice') }}</label>
                             <input v-model.number="form.price" type="number" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-pink-300 outline-none" placeholder="0">
                         </div>
                         <div>
-                            <label class="text-xs font-bold text-gray-500 ml-1">入手日期</label>
+                            <label class="text-xs font-bold text-gray-500 ml-1">{{ t('labelDate') }}</label>
                             <input v-model="form.date" type="date" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-pink-300 outline-none">
                         </div>
                     </div>
 
+                    <!-- 智慧標籤區塊 -->
                     <div>
-                        <label class="text-xs font-bold text-gray-500 ml-1">入手途徑</label>
-                        <div class="flex flex-wrap gap-2 mt-1">
-                            <button v-for="opt in sourceOptions" :key="opt" 
+                        <label class="text-xs font-bold text-gray-500 ml-1">{{ t('labelSource') }}</label>
+                        
+                        <!-- 標籤列表 -->
+                        <div class="flex flex-wrap gap-2 mt-2 mb-2 max-h-24 overflow-y-auto hide-scrollbar">
+                            <button v-for="opt in currentSourceList" :key="opt" 
                                 @click="form.source = opt"
-                                :class="form.source === opt ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-500'"
-                                class="px-3 py-1.5 rounded-lg text-sm font-medium transition">
+                                :class="form.source === opt ? 'bg-pink-500 text-white shadow-md shadow-pink-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                                class="px-3 py-1.5 rounded-full text-sm font-medium transition border border-transparent">
                                 {{ opt }}
                             </button>
                         </div>
-                        <input v-if="!sourceOptions.includes(form.source) && form.source !== ''" v-model="form.source" type="text" class="mt-2 w-full bg-gray-50 p-2 rounded-lg text-sm" placeholder="自訂途徑...">
+                        
+                        <div class="relative">
+                            <input v-model="form.source" type="text" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-pink-300 outline-none pl-9" :placeholder="t('placeholderSource')">
+                            <span class="absolute left-3 top-3.5 text-gray-400">🏷️</span>
+                        </div>
                     </div>
 
                     <button @click="saveItem" class="w-full bg-pink-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-pink-200 hover:bg-pink-600 transition mt-4">
-                        確認收納 ✅
+                        {{ t('confirmBtn') }} ✅
                     </button>
                 </div>
             </div>
@@ -140,75 +185,151 @@
     <script>
         const { createApp, ref, computed, onMounted, watch } = Vue;
 
+        // 語言字典
+        const i18n = {
+            'tw': {
+                appName: '我的谷子記錄簿',
+                menuTitle: '資料管理',
+                exportCSV: '匯出 WPS 表格 (無圖)',
+                exportBackup: '下載完整備份 (含圖)',
+                importBackup: '倒回 / 匯入舊資料',
+                resetTags: '重置常用標籤',
+                totalCount: '總收藏數',
+                unit: '個',
+                totalCost: '總花費',
+                emptyState: '這裡空空的...',
+                emptyTip: '點擊右下角新增，開始記錄你的谷子吧！',
+                addBtn: '記一筆',
+                addTitle: '新增谷子',
+                photoTip: '點擊拍照 / 選圖',
+                labelName: '谷子名稱',
+                placeholderName: '例如：排球少年 徽章',
+                labelPrice: '入手價格',
+                labelDate: '入手日期',
+                labelSource: '入手途徑 (可選或自行輸入)',
+                placeholderSource: '或是輸入其他途徑... (自動儲存)',
+                confirmBtn: '確認收納',
+                alertName: '請輸入谷子名稱',
+                alertFull: '儲存空間已滿！請先備份後清除舊照片。',
+                alertReset: '確定要將途徑標籤恢復成預設值嗎？',
+                alertNoData: '沒有資料可匯出',
+                alertImport: '檢測到資料，確定要倒回嗎？(這會覆蓋現有資料)',
+                alertSuccess: '資料已成功還原！',
+                alertError: '讀取失敗！格式錯誤。',
+                defaultSources: ['通販', '線下店', '交換', '閒魚/Carousell', '日拍', '禮物']
+            },
+            'cn': {
+                appName: '我的谷子记录簿',
+                menuTitle: '数据管理',
+                exportCSV: '导出 WPS 表格 (无图)',
+                exportBackup: '下载完整备份 (含图)',
+                importBackup: '恢复 / 导入旧数据',
+                resetTags: '重置常用标签',
+                totalCount: '总收藏数',
+                unit: '个',
+                totalCost: '总花费',
+                emptyState: '这里空空的...',
+                emptyTip: '点击右下角新增，开始记录你的谷子吧！',
+                addBtn: '记一笔',
+                addTitle: '新增谷子',
+                photoTip: '点击拍照 / 选图',
+                labelName: '谷子名称',
+                placeholderName: '例如：排球少年 徽章',
+                labelPrice: '入手价格',
+                labelDate: '入手日期',
+                labelSource: '入手途径 (可选或自行输入)',
+                placeholderSource: '或是输入其他途径... (自动保存)',
+                confirmBtn: '确认收纳',
+                alertName: '请输入谷子名称',
+                alertFull: '存储空间已满！请先备份后清除旧照片。',
+                alertReset: '确定要将途径标签恢复成默认值吗？',
+                alertNoData: '没有数据可导出',
+                alertImport: '检测到数据，确定要恢复吗？(这将覆盖现有数据)',
+                alertSuccess: '数据已成功还原！',
+                alertError: '读取失败！格式错误。',
+                defaultSources: ['通贩', '线下店', '交换', '闲鱼/Carousell', '日拍', '礼物']
+            }
+        };
+
         createApp({
             setup() {
+                const lang = ref('tw'); // 預設繁體
                 const showModal = ref(false);
+                const showMenu = ref(false);
                 const fileInput = ref(null);
                 const items = ref([]);
                 
-                const sourceOptions = ['通販', '線下店', '交換', '閒魚/Carousell', '日拍', '禮物'];
+                // 標籤管理 (分開存繁簡的自訂標籤)
+                const sourceListTW = ref([...i18n.tw.defaultSources]);
+                const sourceListCN = ref([...i18n.cn.defaultSources]);
 
-                // 表單資料
                 const form = ref({
-                    name: '',
-                    price: '',
-                    date: new Date().toISOString().split('T')[0],
-                    source: '通販',
-                    image: null
+                    name: '', price: '', date: new Date().toISOString().split('T')[0], source: '', image: null
                 });
 
-                // 初始化
+                // 翻譯函數
+                const t = (key) => i18n[lang.value][key];
+
+                // 根據語言顯示對應的標籤列表
+                const currentSourceList = computed(() => {
+                    return lang.value === 'tw' ? sourceListTW.value : sourceListCN.value;
+                });
+
                 onMounted(() => {
-                    const saved = localStorage.getItem('guzi_collection_v1');
-                    if (saved) items.value = JSON.parse(saved);
+                    // 1. 讀取語言設定
+                    const savedLang = localStorage.getItem('guzi_lang');
+                    if (savedLang) lang.value = savedLang;
+
+                    // 2. 讀取資料
+                    const savedItems = localStorage.getItem('guzi_collection_v1');
+                    if (savedItems) items.value = JSON.parse(savedItems);
+
+                    // 3. 讀取自訂標籤
+                    const savedTagsTW = localStorage.getItem('guzi_tags_tw');
+                    const savedTagsCN = localStorage.getItem('guzi_tags_cn');
+                    if (savedTagsTW) sourceListTW.value = JSON.parse(savedTagsTW);
+                    if (savedTagsCN) sourceListCN.value = JSON.parse(savedTagsCN);
                 });
 
-                // 自動存檔
+                // 切換語言
+                const toggleLang = () => {
+                    lang.value = lang.value === 'tw' ? 'cn' : 'tw';
+                    localStorage.setItem('guzi_lang', lang.value);
+                    // 切換時，如果表單是空的，預設途徑也要重置一下
+                    if(!form.value.source) form.value.source = currentSourceList.value[0];
+                };
+
                 watch(items, (newVal) => {
                     try {
                         localStorage.setItem('guzi_collection_v1', JSON.stringify(newVal));
                     } catch (e) {
-                        alert('儲存空間已滿！建議刪除舊記錄或匯出表格後清空。');
+                        alert(t('alertFull'));
                     }
                 }, { deep: true });
 
-                const totalCost = computed(() => {
-                    return items.value.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                });
+                // 監聽標籤變動並分開儲存
+                watch(sourceListTW, (newVal) => localStorage.setItem('guzi_tags_tw', JSON.stringify(newVal)), { deep: true });
+                watch(sourceListCN, (newVal) => localStorage.setItem('guzi_tags_cn', JSON.stringify(newVal)), { deep: true });
 
-                // 觸發檔案選擇
-                const triggerFileInput = () => {
-                    fileInput.value.click();
-                };
+                const totalCost = computed(() => items.value.reduce((sum, item) => sum + (Number(item.price) || 0), 0));
 
-                // 圖片壓縮處理 (關鍵技術：防止 LocalStorage 爆滿)
+                const triggerFileInput = () => fileInput.value.click();
+
                 const handleImageUpload = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
-
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const img = new Image();
                         img.onload = () => {
-                            // 建立 Canvas 進行壓縮
                             const canvas = document.createElement('canvas');
                             const ctx = canvas.getContext('2d');
-                            
-                            // 設定最大寬度 (例如 600px，手機看夠清楚了)
                             const maxWidth = 600;
                             let width = img.width;
                             let height = img.height;
-
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-
-                            canvas.width = width;
-                            canvas.height = height;
+                            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                            canvas.width = width; canvas.height = height;
                             ctx.drawImage(img, 0, 0, width, height);
-
-                            // 轉成 Base64 JPEG，品質 0.7
                             form.value.image = canvas.toDataURL('image/jpeg', 0.7);
                         };
                         img.src = e.target.result;
@@ -217,90 +338,118 @@
                 };
 
                 const saveItem = () => {
-                    if (!form.value.name) {
-                        alert('請輸入谷子名稱');
-                        return;
+                    if (!form.value.name) { alert(t('alertName')); return; }
+                    
+                    // 如果沒選途徑，預設選第一個
+                    if (!form.value.source) form.value.source = currentSourceList.value[0];
+
+                    const currentSource = form.value.source.trim();
+                    // 自動加入標籤 (根據目前語言加入對應列表)
+                    if (lang.value === 'tw') {
+                        if (currentSource && !sourceListTW.value.includes(currentSource)) sourceListTW.value.push(currentSource);
+                    } else {
+                        if (currentSource && !sourceListCN.value.includes(currentSource)) sourceListCN.value.push(currentSource);
                     }
 
-                    items.value.unshift({
-                        id: Date.now(),
-                        ...form.value
-                    });
-
+                    items.value.unshift({ id: Date.now(), ...form.value });
                     closeModal();
                 };
 
                 const closeModal = () => {
                     showModal.value = false;
-                    // 重置表單
                     setTimeout(() => {
-                        form.value = {
-                            name: '',
-                            price: '',
-                            date: new Date().toISOString().split('T')[0],
-                            source: '通販',
-                            image: null
-                        };
+                        form.value = { name: '', price: '', date: new Date().toISOString().split('T')[0], source: '', image: null };
                     }, 300);
                 };
 
                 const removeItem = (index) => {
-                    if(confirm('確定要刪除這個谷子記錄嗎？')) {
-                        items.value.splice(index, 1);
+                    if(confirm('Delete?')) items.value.splice(index, 1);
+                };
+
+                const resetTags = () => {
+                    if(confirm(t('alertReset'))) {
+                        if (lang.value === 'tw') sourceListTW.value = [...i18n.tw.defaultSources];
+                        else sourceListCN.value = [...i18n.cn.defaultSources];
+                        showMenu.value = false;
                     }
                 };
 
                 const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-                // 匯出 CSV (WPS 可讀)
                 const exportToCSV = () => {
-                    if (items.value.length === 0) {
-                        alert('還沒有資料可以匯出喔！');
-                        return;
-                    }
-
-                    // CSV 標頭 (加入 \uFEFF 是為了讓 Excel/WPS 正確識別中文編碼)
-                    let csvContent = "\uFEFF谷子名稱,入手日期,途徑,價格(HKD)\n";
-
+                    if (items.value.length === 0) { alert(t('alertNoData')); return; }
+                    let csvContent = "\uFEFFName,Date,Source,Price\n"; // Header 簡化通用
                     items.value.forEach(item => {
-                        // 處理名稱中可能含有的逗號，用引號包起來
                         const name = `"${item.name.replace(/"/g, '""')}"`;
-                        const row = `${name},${item.date},${item.source},${item.price}`;
-                        csvContent += row + "\n";
+                        csvContent += `${name},${item.date},${item.source},${item.price}\n`;
                     });
+                    downloadFile(csvContent, 'text/csv;charset=utf-8;', `Guzi_List_${getTimestamp()}.csv`);
+                    showMenu.value = false;
+                };
 
-                    // 建立下載連結
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const exportBackup = () => {
+                    if (items.value.length === 0) { alert(t('alertNoData')); return; }
+                    const backupData = {
+                        items: items.value,
+                        tagsTW: sourceListTW.value,
+                        tagsCN: sourceListCN.value
+                    };
+                    const data = JSON.stringify(backupData);
+                    downloadFile(data, 'application/json', `Guzi_Backup_${getTimestamp()}.json`);
+                    showMenu.value = false;
+                };
+
+                const importBackup = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const rawData = JSON.parse(e.target.result);
+                            let importedItems = rawData.items || (Array.isArray(rawData) ? rawData : []);
+                            
+                            if (confirm(t('alertImport'))) {
+                                items.value = importedItems;
+                                if (rawData.tagsTW) sourceListTW.value = rawData.tagsTW;
+                                if (rawData.tagsCN) sourceListCN.value = rawData.tagsCN;
+                                alert(t('alertSuccess'));
+                            }
+                        } catch (err) {
+                            alert(t('alertError'));
+                        }
+                    };
+                    reader.readAsText(file);
+                    showMenu.value = false;
+                    event.target.value = '';
+                };
+
+                const downloadFile = (content, type, filename) => {
+                    const blob = new Blob([content], { type: type });
                     const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    
-                    // 檔名加入日期
-                    const dateStr = new Date().toISOString().split('T')[0];
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', `谷子記錄表_${dateStr}.csv`);
-                    link.style.visibility = 'hidden';
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                 };
 
+                const getTimestamp = () => new Date().toISOString().slice(0,16).replace(/[-T:]/g, '');
+
                 return {
-                    showModal, items, form, fileInput, sourceOptions, totalCost,
-                    triggerFileInput, handleImageUpload, saveItem, closeModal, removeItem, formatNumber, exportToCSV
+                    lang, t, toggleLang, currentSourceList,
+                    showModal, showMenu, items, form, fileInput, totalCost,
+                    triggerFileInput, handleImageUpload, saveItem, closeModal, removeItem, formatNumber,
+                    exportToCSV, exportBackup, importBackup, resetTags
                 };
             }
         }).mount('#app');
     </script>
     
     <style>
-        /* 簡單的動畫 */
-        @keyframes slide-up {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .animate-slide-up {
-            animation: slide-up 0.3s ease-out;
-        }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slide-up-sm { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide-up { animation: slide-up 0.3s ease-out; }
+        .animate-slide-up-sm { animation: slide-up-sm 0.2s ease-out; }
     </style>
 </body>
 </html>
